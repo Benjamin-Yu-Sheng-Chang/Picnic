@@ -1,15 +1,8 @@
-export type CalendarView = "month" | "week" | "day" | "agenda"
+import { Doc } from "@/../convex/_generated/dataModel";
 
-export interface CalendarEvent {
-  id: string
-  title: string
-  description?: string
-  start: Date
-  end: Date
-  allDay?: boolean
-  color?: EventColor
-  location?: string
-}
+export type CalendarView = "month" | "week" | "day" | "agenda";
+
+export type CalendarEvent = Doc<"events">;
 
 export type EventColor =
   | "sky"
@@ -17,4 +10,4 @@ export type EventColor =
   | "violet"
   | "rose"
   | "emerald"
-  | "orange"
+  | "orange";

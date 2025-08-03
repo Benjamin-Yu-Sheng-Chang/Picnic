@@ -45,12 +45,13 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Id } from "../../../convex/_generated/dataModel";
 
 export interface EventCalendarProps {
   events?: CalendarEvent[];
   onEventAdd?: (event: CalendarEvent) => void;
   onEventUpdate?: (event: CalendarEvent) => void;
-  onEventDelete?: (eventId: string) => void;
+  onEventDelete?: (eventId: Id<"events">) => void;
   className?: string;
   initialView?: CalendarView;
 }
