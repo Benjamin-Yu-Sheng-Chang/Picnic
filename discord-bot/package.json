@@ -1,26 +1,29 @@
 {
-  "name": "discord-getting-started",
-  "private": true,
-  "version": "1.0.0",
-  "description": "Discord example app",
-  "main": "app.js",
+  "name": "discord-bot",
+  "module": "index.ts",
   "type": "module",
-  "engines": {
-    "node": ">=18.x"
-  },
+  "main": "dist/index.js",
+  "private": true,
   "scripts": {
-    "start": "node app.js",
-    "register": "node commands.js",
-    "dev": "nodemon app.js"
-  },
-  "author": "Shay DeWael",
-  "license": "MIT",
-  "dependencies": {
-    "discord-interactions": "^4.0.0",
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2"
+    "dev": "tsx watch src/index.ts",
+    "dev-interactions": "bun run src/interactions-server.ts",
+    "register-commands": "bun run src/register-commands.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "start": "bun run dist/index.js",
+    "test-endpoint": "node test-endpoint.js"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0"
+    "@types/bun": "latest",
+    "@types/node": "^24.1.0",
+    "tsx": "^4.20.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.1",
+    "hono": "^4.8.12",
+    "tweetnacl": "^1.0.3"
   }
 }
