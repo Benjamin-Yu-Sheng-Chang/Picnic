@@ -1,4 +1,9 @@
-import { createEventArgs, deleteEventArgs, updateEventArgs } from "./type";
+import {
+  createEventArgs,
+  deleteEventArgs,
+  UpdateEventArgs,
+  updateEventArgs,
+} from "./type";
 import { authMutation, authQuery } from "./utils";
 
 export const listEvents = authQuery({
@@ -8,6 +13,7 @@ export const listEvents = authQuery({
       .query("events")
       .withIndex("createdBy", (q) => q.eq("createdBy", ctx.userId))
       .collect();
+
     return events;
   },
 });
@@ -28,8 +34,36 @@ export const createEvent = authMutation({
 export const updateEvent = authMutation({
   args: updateEventArgs,
   handler: async (ctx, args) => {
+    const existingEvent = await ctx.db.get(args.eventId);
+    if (!existingEvent) {
+      throw new Error("Event not found");
+    }
+    const patchData: Omit<UpdateEventArgs, "eventId"> = {
+      ...(args.title &&
+        args.title !== existingEvent.title && { title: args.title }),
+      ...(args.description &&
+        args.description !== existingEvent.description && {
+          description: args.description,
+        }),
+      ...(args.start &&
+        args.start !== existingEvent.start && { start: args.start }),
+      ...(args.end && args.end !== existingEvent.end && { end: args.end }),
+      ...(args.allDay &&
+        args.allDay !== existingEvent.allDay && { allDay: args.allDay }),
+      ...(args.color &&
+        args.color !== existingEvent.color && { color: args.color }),
+      ...(args.location &&
+        args.location !== existingEvent.location && {
+          location: args.location,
+        }),
+      ...(args.price &&
+        args.price !== existingEvent.price && { price: args.price }),
+    };
+    if (Object.keys(patchData).length === 0) {
+      return;
+    }
     await ctx.db.patch(args.eventId, {
-      ...args,
+      ...patchData,
       updatedAt: Date.now(),
     });
     return;

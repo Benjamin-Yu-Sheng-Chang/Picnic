@@ -273,7 +273,7 @@ export function WeekView({
 
                     return (
                       <EventItem
-                        key={`spanning-${event.id}`}
+                        key={`spanning-${event._id}`}
                         onClick={(e) => handleEventClick(event, e)}
                         event={event}
                         view="month"
@@ -325,7 +325,7 @@ export function WeekView({
             {/* Positioned events */}
             {(processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
               <div
-                key={positionedEvent.event.id}
+                key={positionedEvent.event._id}
                 className="absolute z-10 px-0.5"
                 style={{
                   top: `${positionedEvent.top}px`,

@@ -49,7 +49,7 @@ export function DraggableEvent({
 
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
-      id: `${event.id}-${view}`,
+      id: `${event._id}-${view}`,
       data: {
         event,
         view,
@@ -74,7 +74,7 @@ export function DraggableEvent({
   };
 
   // Don't render if this event is being dragged
-  if (isDragging || activeId === `${event.id}-${view}`) {
+  if (isDragging || activeId === `${event._id}-${view}`) {
     return (
       <div
         ref={setNodeRef}

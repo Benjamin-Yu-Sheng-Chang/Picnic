@@ -22,6 +22,8 @@ import {
 import { addMinutes, differenceInMinutes } from "date-fns";
 
 import { EventItem, type CalendarEvent } from "@/components/event-calendar";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 // Define the context type
 type CalendarDndContextType = {
@@ -60,13 +62,11 @@ export const useCalendarDnd = () => useContext(CalendarDndContext);
 // Props for the provider
 interface CalendarDndProviderProps {
   children: ReactNode;
-  onEventUpdate: (event: CalendarEvent) => void;
 }
 
-export function CalendarDndProvider({
-  children,
-  onEventUpdate,
-}: CalendarDndProviderProps) {
+export function CalendarDndProvider({ children }: CalendarDndProviderProps) {
+  const updateEvent = useMutation(api.function.updateEvent);
+
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [activeView, setActiveView] = useState<"month" | "week" | "day" | null>(
@@ -300,10 +300,10 @@ export function CalendarDndProvider({
 
       if (hasStartTimeChanged) {
         // Update the event only if the time has changed
-        onEventUpdate({
-          ...calendarEvent,
-          start: newStart,
-          end: newEnd,
+        updateEvent({
+          eventId: calendarEvent._id,
+          start: newStart.getTime(),
+          end: newEnd.getTime(),
         });
       }
     } catch (error) {

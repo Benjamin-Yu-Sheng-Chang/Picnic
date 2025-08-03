@@ -37,21 +37,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useEventCalendarMutation } from "./hooks/use-event-calendar-mutation";
 
 interface EventDialogProps {
-  event: CalendarEvent | null;
+  event: Partial<CalendarEvent> | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (event: CalendarEvent) => void;
-  onDelete: (eventId: string) => void;
+  actionType: "create" | "update";
+  setActionType: (actionType: "create" | "update") => void;
 }
 
 export function EventDialog({
   event,
   isOpen,
   onClose,
-  onSave,
-  onDelete,
+  actionType,
+  setActionType,
 }: EventDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -65,6 +66,7 @@ export function EventDialog({
   const [error, setError] = useState<string | null>(null);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const { createEvent, updateEvent, deleteEvent } = useEventCalendarMutation();
 
   // Debug log to check what event is being passed
   useEffect(() => {
@@ -76,8 +78,8 @@ export function EventDialog({
       setTitle(event.title || "");
       setDescription(event.description || "");
 
-      const start = new Date(event.start);
-      const end = new Date(event.end);
+      const start = event.start ? new Date(event.start) : new Date();
+      const end = event.end ? new Date(event.end) : new Date();
 
       setStartDate(start);
       setEndDate(end);
@@ -166,22 +168,36 @@ export function EventDialog({
     // Use generic title if empty
     const eventTitle = title.trim() ? title : "(no title)";
 
-    onSave({
-      id: event?.id || "",
-      title: eventTitle,
-      description,
-      start,
-      end,
-      allDay,
-      location,
-      color,
-    });
+    if (actionType === "create") {
+      createEvent({
+        title: eventTitle,
+        description,
+        start: start.getTime(),
+        end: end.getTime(),
+        allDay,
+        location,
+        color,
+      });
+    } else if (actionType === "update" && event?._id) {
+      updateEvent({
+        eventId: event?._id,
+        title: eventTitle,
+        description,
+        start: start.getTime(),
+        end: end.getTime(),
+        allDay,
+        location,
+        color,
+      });
+    }
+    onClose();
   };
 
   const handleDelete = () => {
-    if (event?.id) {
-      onDelete(event.id);
+    if (event?._id) {
+      deleteEvent({ eventId: event._id });
     }
+    onClose();
   };
 
   // Updated color options to match types.ts
@@ -233,9 +249,11 @@ export function EventDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{event?.id ? "Edit Event" : "Create Event"}</DialogTitle>
+          <DialogTitle>
+            {event?._id ? "Edit Event" : "Create Event"}
+          </DialogTitle>
           <DialogDescription className="sr-only">
-            {event?.id
+            {event?._id
               ? "Edit the details of this event"
               : "Add a new event to your calendar"}
           </DialogDescription>
@@ -277,6 +295,7 @@ export function EventDialog({
                       "group bg-background hover:bg-background border-input w-full justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
                       !startDate && "text-muted-foreground",
                     )}
+                    onClick={() => setActionType("create")}
                   >
                     <span
                       className={cn(
@@ -442,7 +461,7 @@ export function EventDialog({
           </fieldset>
         </div>
         <DialogFooter className="flex-row sm:justify-between">
-          {event?.id && (
+          {event?._id && (
             <Button
               variant="outline"
               size="icon"

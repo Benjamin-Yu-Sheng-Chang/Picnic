@@ -74,7 +74,7 @@ export function AgendaView({
               <div className="mt-6 space-y-2">
                 {dayEvents.map((event) => (
                   <EventItem
-                    key={event.id}
+                    key={event._id}
                     event={event}
                     view="agenda"
                     onClick={(e) => handleEventClick(event, e)}

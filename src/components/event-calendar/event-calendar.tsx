@@ -19,7 +19,6 @@ import {
   ChevronRightIcon,
   PlusIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import {
   addHoursToDate,
@@ -45,31 +44,24 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Id } from "../../../convex/_generated/dataModel";
 
 export interface EventCalendarProps {
-  events?: CalendarEvent[];
-  onEventAdd?: (event: CalendarEvent) => void;
-  onEventUpdate?: (event: CalendarEvent) => void;
-  onEventDelete?: (eventId: Id<"events">) => void;
+  events: CalendarEvent[];
   className?: string;
   initialView?: CalendarView;
 }
 
 export function EventCalendar({
   events = [],
-  onEventAdd,
-  onEventUpdate,
-  onEventDelete,
   className,
   initialView = "month",
 }: EventCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>(initialView);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
-    null,
-  );
+  const [selectedEvent, setSelectedEvent] =
+    useState<Partial<CalendarEvent> | null>(null);
+  const [actionType, setActionType] = useState<"create" | "update">("create");
 
   // Add keyboard shortcuts for view switching
   useEffect(() => {
@@ -142,11 +134,10 @@ export function EventCalendar({
     console.log("Event selected:", event); // Debug log
     setSelectedEvent(event);
     setIsEventDialogOpen(true);
+    setActionType("update");
   };
 
   const handleEventCreate = (startTime: Date) => {
-    console.log("Creating new event at:", startTime); // Debug log
-
     // Snap to 15-minute intervals
     const minutes = startTime.getMinutes();
     const remainder = minutes % 15;
@@ -162,8 +153,10 @@ export function EventCalendar({
       startTime.setMilliseconds(0);
     }
 
-    const newEvent: CalendarEvent = {
-      id: "",
+    const newEvent: Omit<
+      CalendarEvent,
+      "_id" | "_creationTime" | "createdAt" | "updatedAt" | "createdBy"
+    > = {
       title: "",
       start: startTime,
       end: addHoursToDate(startTime, 1),
@@ -171,54 +164,7 @@ export function EventCalendar({
     };
     setSelectedEvent(newEvent);
     setIsEventDialogOpen(true);
-  };
-
-  const handleEventSave = (event: CalendarEvent) => {
-    if (event.id) {
-      onEventUpdate?.(event);
-      // Show toast notification when an event is updated
-      toast(`Event "${event.title}" updated`, {
-        description: format(new Date(event.start), "MMM d, yyyy"),
-        position: "bottom-left",
-      });
-    } else {
-      onEventAdd?.({
-        ...event,
-        id: Math.random().toString(36).substring(2, 11),
-      });
-      // Show toast notification when an event is added
-      toast(`Event "${event.title}" added`, {
-        description: format(new Date(event.start), "MMM d, yyyy"),
-        position: "bottom-left",
-      });
-    }
-    setIsEventDialogOpen(false);
-    setSelectedEvent(null);
-  };
-
-  const handleEventDelete = (eventId: string) => {
-    const deletedEvent = events.find((e) => e.id === eventId);
-    onEventDelete?.(eventId);
-    setIsEventDialogOpen(false);
-    setSelectedEvent(null);
-
-    // Show toast notification when an event is deleted
-    if (deletedEvent) {
-      toast(`Event "${deletedEvent.title}" deleted`, {
-        description: format(new Date(deletedEvent.start), "MMM d, yyyy"),
-        position: "bottom-left",
-      });
-    }
-  };
-
-  const handleEventUpdate = (updatedEvent: CalendarEvent) => {
-    onEventUpdate?.(updatedEvent);
-
-    // Show toast notification when an event is updated via drag and drop
-    toast(`Event "${updatedEvent.title}" moved`, {
-      description: format(new Date(updatedEvent.start), "MMM d, yyyy"),
-      position: "bottom-left",
-    });
+    setActionType("create");
   };
 
   const viewTitle = useMemo(() => {
@@ -272,7 +218,7 @@ export function EventCalendar({
         } as React.CSSProperties
       }
     >
-      <CalendarDndProvider onEventUpdate={handleEventUpdate}>
+      <CalendarDndProvider>
         <div
           className={cn(
             "flex items-center justify-between p-2 sm:p-4",
@@ -407,8 +353,8 @@ export function EventCalendar({
             setIsEventDialogOpen(false);
             setSelectedEvent(null);
           }}
-          onSave={handleEventSave}
-          onDelete={handleEventDelete}
+          actionType={actionType}
+          setActionType={setActionType}
         />
       </CalendarDndProvider>
     </div>

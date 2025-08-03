@@ -1,8 +1,6 @@
-import { Doc } from "@/../convex/_generated/dataModel";
-
 export type CalendarView = "month" | "week" | "day" | "agenda";
 
-export type CalendarEvent = Doc<"events">;
+export type { CalendarEvent, EventId } from "@/../convex/type";
 
 export type EventColor =
   | "sky"
