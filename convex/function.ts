@@ -8,10 +8,10 @@ import { authMutation, authQuery } from "./utils";
 
 export const listEvents = authQuery({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx: any) => {
     const events = await ctx.db
       .query("events")
-      .withIndex("createdBy", (q) => q.eq("createdBy", ctx.userId))
+      .withIndex("createdBy", (q: any) => q.eq("createdBy", ctx.userId))
       .collect();
 
     return events;
@@ -20,7 +20,7 @@ export const listEvents = authQuery({
 
 export const createEvent = authMutation({
   args: createEventArgs,
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const newEventId = await ctx.db.insert("events", {
       ...args,
       createdBy: ctx.userId,
@@ -33,7 +33,7 @@ export const createEvent = authMutation({
 
 export const updateEvent = authMutation({
   args: updateEventArgs,
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const existingEvent = await ctx.db.get(args.eventId);
     if (!existingEvent) {
       throw new Error("Event not found");
@@ -72,7 +72,7 @@ export const updateEvent = authMutation({
 
 export const deleteEvent = authMutation({
   args: deleteEventArgs,
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     await ctx.db.delete(args.eventId);
     return;
   },
