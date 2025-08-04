@@ -15,7 +15,7 @@ import {
 } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
-import { UserId } from "type";
+import { UserId } from "./type";
 
 export type AuthQueryCtx = QueryCtx & { userId: UserId };
 export type AuthMutationCtx = MutationCtx & { userId: UserId };

@@ -1,5 +1,5 @@
-import { CreateEventArgs, DeleteEventArgs, UpdateEventArgs, UserId, ValidateDiscordLinkArgs } from "type";
-import { MutationCtx, QueryCtx } from "_generated/server";
+import { CreateEventArgs, DeleteEventArgs, UpdateEventArgs, UserId, ValidateDiscordLinkArgs } from "./type";
+import { MutationCtx, QueryCtx } from "./_generated/server";
 
 export async function ListEvents(ctx: QueryCtx, args: { userId: UserId }) {
    const events = await ctx.db

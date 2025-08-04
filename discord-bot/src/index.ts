@@ -132,7 +132,7 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
       return c.json({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-          content: "🏓 Pong! " + id,
+          content: "🏓 Pong!",
           flags: MessageFlags.Ephemeral,
         },
       });
@@ -174,18 +174,18 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
       console.log("🔄 Creating event");
       try {
         await createEvent({
-          // title: options[0].value,
-          // start: options[1].value,
-          // end: options[2].value,
-          // description: options[3].value,
-          // allDay: options[4].value,
-          // location: options[5].value,
-          // price: options[6].value,
-          // discordUserId: member.user.id,
+          title: options[0].value,
+          start: options[1].value,
+          end: options[2].value,
+          description: options[3].value,
+          allDay: options[4].value,
+          location: options[5].value,
+          price: options[6].value,
           discordUserId: member.user.id,
-          title: "Test",
-          start: "2025-08-03T12:00:00.000Z",
-          end: "2025-08-03T13:00:00.000Z",
+          // discordUserId: member.user.id,
+          // title: "Test",
+          // start: "2025-08-03T12:00:00.000Z",
+          // end: "2025-08-03T13:00:00.000Z",
         });
         return logMessage(c, "Event created");
       } catch (error) {
@@ -210,13 +210,13 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
       try {
         await updateEvent({
           eventId: options[0].value,
-          title: options[1].value,
-          start: options[2].value,
-          end: options[3].value,
-          description: options[4].value,
-          allDay: options[5].value,
-          location: options[6].value,
-          price: options[7].value,
+          ...(options[1].value && { title: options[1].value }),
+          ...(options[2].value && { start: options[2].value }),
+          ...(options[3].value && { end: options[3].value }),
+          ...(options[4].value && { description: options[4].value }),
+          ...(options[5].value && { allDay: options[5].value }),
+          ...(options[6].value && { location: options[6].value }),
+          ...(options[7].value && { price: options[7].value }),
           discordUserId: member.user.id,
         });
         return logMessage(c, "Event updated");

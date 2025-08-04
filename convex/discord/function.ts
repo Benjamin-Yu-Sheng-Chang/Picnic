@@ -1,6 +1,6 @@
-import { mutation, MutationCtx } from "_generated/server";
+import { mutation, MutationCtx } from "../_generated/server";
 import { ConvexError } from "convex/values";
-import { DiscordCreateEventArgs, discordCreateEventArgs, DiscordDeleteEventArgs, discordDeleteEventArgs, DiscordUpdateEventArgs, discordUpdateEventArgs } from "type";
+import { DiscordCreateEventArgs, discordCreateEventArgs, DiscordDeleteEventArgs, discordDeleteEventArgs, DiscordUpdateEventArgs, discordUpdateEventArgs } from "../type";
 import * as Model from "../model";
 
 export const discordCreateEvent = mutation({
