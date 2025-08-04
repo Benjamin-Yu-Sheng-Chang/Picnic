@@ -48,3 +48,21 @@ export type CalendarEvent = Omit<Doc<"events">, "start" | "end"> & {
   end: Date;
 };
 export type EventId = Id<"events">;
+
+export const linkDiscordAccountValidator = {
+  email: v.string(),
+  discordUserId: v.string(),
+  discordUsername: v.string(),
+  discordDiscriminator: v.optional(v.string()),
+};
+
+export const verifyLinkValidator = {
+  token: v.string(),
+  discordUserId: v.string(),
+};
+
+export const linkDiscordAccountArgs = v.object(linkDiscordAccountValidator);
+export const verifyLinkArgs = v.object(verifyLinkValidator);
+
+export type LinkDiscordAccountArgs = Infer<typeof linkDiscordAccountArgs>;
+export type VerifyLinkArgs = Infer<typeof verifyLinkArgs>;

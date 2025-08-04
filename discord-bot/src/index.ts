@@ -9,6 +9,7 @@ import {
   ApplicationCommandOptionType
 } from "discord.js";
 import { createServer } from "http";
+import { testDiscordLinking } from "./http/convex-client";
 
 const client = new Client({ 
   intents: [
@@ -82,7 +83,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
 client.on("ready", async (c) => {
   console.log(`🤖 Logged in as ${c.user.username}`);
   console.log(`🆔 Bot ID: ${c.user.id}`);
-  console.log(`🌐 Convex URL: ${process.env.CONVEX_HTTP_URL}`);
+  console.log(`🌐 Convex URL: ${process.env.CONVEX_DEV_URL}`);
   
   try {
     console.log('🔄 Started refreshing application (/) commands.');
@@ -127,20 +128,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   if (interaction.commandName === 'link-account') {
-    const email = interaction.options.getString('email', true);
-    const discordUserId = interaction.user.id;
-    const discordUsername = interaction.user.username;
-
-    console.log('🔗 Account linking request:', {
-      email,
-      discordUserId,
-      discordUsername,
-    });
-
-    await interaction.reply({
-      content: `🔗 Account linking initiated!\n\n**Discord:** ${discordUsername} (${discordUserId})\n**Email:** ${email}\n\n*In a real implementation, this would send a verification email.*`,
-      ephemeral: true
-    });
+    
   }
 
   if (interaction.commandName === 'create-schedule') {
@@ -162,12 +150,12 @@ async function handleCreateSchedule(interaction: ChatInputCommandInteraction) {
   console.log('📝 Creating schedule with data:', {
     title, description, start, end, allDay, color, location, price,
     userId: interaction.user.id,
-    convexUrl: process.env.CONVEX_HTTP_URL
+    convexUrl: process.env.CONVEX_DEV_URL
   });
 
   try {
     // Call the Convex HTTP endpoint
-    const response = await fetch(`${process.env.CONVEX_HTTP_URL}/create-schedule`, {
+    const response = await fetch(`${process.env.CONVEX_DEV_URL}/create-schedule`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -212,6 +200,8 @@ async function handleCreateSchedule(interaction: ChatInputCommandInteraction) {
   }
 }
 
+const result = await testDiscordLinking();
+console.log(result);
 client.login(process.env.DISCORD_TOKEN);
 
 // Optional: Simple health check server

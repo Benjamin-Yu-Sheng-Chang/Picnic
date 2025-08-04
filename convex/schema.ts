@@ -14,10 +14,12 @@ export default defineSchema({
   })
     .index("email", ["email"])
     .index("phone", ["phone"]),
+
   authSessions: defineTable({
     userId: v.id("users"),
     expirationTime: v.number(),
   }).index("userId", ["userId"]),
+
   authAccounts: defineTable({
     userId: v.id("users"),
     provider: v.string(),
@@ -65,6 +67,36 @@ export default defineSchema({
     lastAttemptTime: v.number(),
     attemptsLeft: v.number(),
   }).index("identifier", ["identifier"]),
+
+    // Discord account linking
+  discordLinks: defineTable({
+    userId: v.id("users"),
+    discordUserId: v.string(), // Discord's user ID (e.g., "123456789012345678")
+    discordUsername: v.string(), // Discord username (e.g., "john_doe")
+    discordDiscriminator: v.optional(v.string()), // Legacy discriminator (e.g., "#1234")
+    linkedAt: v.number(), // When the link was created
+    verifiedAt: v.optional(v.number()), // When the link was verified
+    isActive: v.boolean(), // Whether the link is currently active
+  })
+    .index("userId", ["userId"])
+    .index("discordUserId", ["discordUserId"])
+    .index("discordUsername", ["discordUsername"])
+    .index("activeLinks", ["isActive", "userId"]),
+
+  // Temporary verification codes for Discord linking
+  discordVerificationCodes: defineTable({
+    discordUserId: v.string(),
+    discordUsername: v.string(),
+    discordDiscriminator: v.optional(v.string()),
+    email: v.string(),
+    code: v.string(), // 6-digit verification code
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+  })
+    .index("discordUserId", ["discordUserId"])
+    .index("email", ["email"])
+    .index("code", ["code"])
+    .index("expiresAt", ["expiresAt"]),
 
   events: defineTable(eventValidator).index("createdBy", ["createdBy"]),
 });

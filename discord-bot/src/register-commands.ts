@@ -7,10 +7,6 @@ const commands = [
     .setDescription("Replies with Pong!"),
 
   new SlashCommandBuilder()
-    .setName("test")
-    .setDescription("Basic test command like Discord's example"),
-
-  new SlashCommandBuilder()
     .setName("link-account")
     .setDescription("Link your Discord account to your existing user account")
     .addStringOption(option =>
@@ -18,56 +14,14 @@ const commands = [
         .setDescription("Your account email address")
         .setRequired(true)
     ),
-    
+
   new SlashCommandBuilder()
-    .setName("create-schedule")
-    .setDescription("Create a new schedule event")
-    // Required options first
-    .addStringOption((option) =>
-      option.setName("title").setDescription("Event title").setRequired(true)
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName("start")
-        .setDescription("Start time (Unix timestamp)")
+    .setName("verify-link")
+    .setDescription("Verify your Discord account")
+    .addStringOption(option =>
+      option.setName("token")
+        .setDescription("The token sent to your email")
         .setRequired(true)
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName("end")
-        .setDescription("End time (Unix timestamp)")
-        .setRequired(true)
-    )
-    // Optional options after required ones
-    .addStringOption((option) =>
-      option
-        .setName("description")
-        .setDescription("Event description")
-        .setRequired(false)
-    )
-    .addBooleanOption((option) =>
-      option
-        .setName("allday")
-        .setDescription("Is this an all-day event?")
-        .setRequired(false)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("color")
-        .setDescription("Event color (hex code)")
-        .setRequired(false)
-    )
-    .addStringOption((option) =>
-      option
-        .setName("location")
-        .setDescription("Event location")
-        .setRequired(false)
-    )
-    .addNumberOption((option) =>
-      option
-        .setName("price")
-        .setDescription("Event price")
-        .setRequired(false)
     ),
 ].map((command) => command.toJSON());
 

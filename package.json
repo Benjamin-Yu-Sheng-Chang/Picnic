@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.81",
+    "@convex-dev/resend": "^0.1.7",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -30,6 +31,7 @@
     "react": "^19.0.0",
     "react-day-picker": "^9.8.1",
     "react-dom": "^19.0.0",
+    "resend": "^4.7.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1"
   },

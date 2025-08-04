@@ -8,14 +8,11 @@ import {
   ComponentType,
   MessageFlags,
 } from "discord.js";
+import { sendDiscordOTP, verifyDiscordLink } from "./http/convex-client";
 
 const app = new Hono();
 
-// Helper function like in Discord's example
-function getRandomEmoji() {
-  const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '🥲', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'];
-  return emojis[Math.floor(Math.random() * emojis.length)];
-}
+
 
 // Discord verification middleware
 const verifyDiscordRequest = async (c: any, next: () => Promise<void>) => {
@@ -60,16 +57,16 @@ app.get("/health", (c: any) => {
 // Discord interactions endpoint
 app.post("/interactions", verifyDiscordRequest, async (c: any) => {
   // Interaction type and data (following Discord's official pattern)
-  const { type, id, data } = c.get("body");
+  const { type, id, data, member } = c.get("body");
 
-  console.log("📥 Received interaction:", type);
+  console.log("📥 Member:", member);
 
   /**
    * Handle verification requests
    */
   if (type === InteractionType.Ping) {
     console.log("🏓 Responding to ping");
-    return c.json({ type: InteractionResponseType.Pong, id: id });
+    return c.json({ type: InteractionResponseType.Pong});
   }
 
   /**
@@ -92,27 +89,36 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
       });
     }
 
-    // "test" command (following Discord's official example pattern)
-    if (name === "test") {
+    if (name === "link-account") {
+      await sendDiscordOTP({
+        email: options[0].value, // email is the first option
+        discordUserId: member.user.id,
+        discordUsername: member.user.username,
+        discordDiscriminator: member.user.discriminator,
+      });
       return c.json({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-          content: `hello world ${getRandomEmoji()}`,
-          flags: MessageFlags.Ephemeral,
+          content: "Linking account, please check your email for the verification code",
         },
       });
     }
 
-    // "link-account" command
-    if (name === "link-account") {
-      return await handleLinkAccountCommand(c, { type, id, data, options });
-    }
-
-    // "create-schedule" command
-    if (name === "create-schedule") {
-      return await handleCreateScheduleCommand(c, { type, id, data, options });
+    if (name === "verify-link") {
+      const result = await verifyDiscordLink({
+        token: options[0].value, // token is the first option
+        discordUserId: member.user.id,
+      });
+      return c.json({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          content: result ? "Verification successful" : "Verification failed",
+        },
+      });
     }
   }
+
+  
 
   // Unknown command
   return c.json({
@@ -124,125 +130,6 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
   });
 });
 
-async function handleCreateScheduleCommand(c: any, interaction: any) {
-  const { options } = interaction;
-  // Parse options
-  const getOption = (name: string) => 
-    options?.find((opt) => opt.name === name)?.value;
-
-  const title = getOption("title");
-  const start = getOption("start");
-  const end = getOption("end");
-  const description = getOption("description");
-  const allDay = getOption("allday");
-  const color = getOption("color");
-  const location = getOption("location");
-  const price = getOption("price");
-
-  console.log("📝 Creating schedule with data:", {
-    title, description, start, end, allDay, color, location, price,
-    userId: interaction.member?.user?.id || interaction.user?.id,
-  });
-
-  try {
-    // Call Convex HTTP endpoint
-    const response = await fetch(`${process.env.CONVEX_HTTP_URL}/create-schedule`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        description,
-        start,
-        end,
-        allDay,
-        color,
-        location,
-        price,
-        userId: interaction.member?.user?.id || interaction.user?.id,
-      }),
-    });
-
-    console.log("📡 Convex response status:", response.status);
-
-    if (response.ok) {
-      const result = await response.json() as { eventId: string; message?: string };
-      console.log("✅ Success response:", result);
-
-      return c.json({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: {
-          content: `✅ Schedule created successfully! Event ID: ${result.eventId}`,
-          flags: MessageFlags.Ephemeral,
-        },
-      });
-    } else {
-      const error = await response.text();
-      console.log("❌ Error response:", error);
-
-      return c.json({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: {
-          content: `❌ Failed to create schedule: ${error}`,
-          flags: MessageFlags.Ephemeral,
-        },
-      });
-    }
-  } catch (error) {
-    console.error("❌ Error creating schedule:", error);
-
-    return c.json({
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: {
-        content: "❌ An error occurred while creating the schedule.",
-        flags: MessageFlags.Ephemeral,
-      },
-    });
-  }
-}
-
-async function handleLinkAccountCommand(c: any, interaction: any) {
-  const { options } = interaction;
-  const getOption = (name: string) => 
-    options?.find((opt) => opt.name === name)?.value;
-
-  const email = getOption("email");
-  const discordUserId = interaction.member?.user?.id || interaction.user?.id;
-  const discordUsername = interaction.member?.user?.username || interaction.user?.username;
-
-  console.log("🔗 Account linking request:", {
-    email,
-    discordUserId,
-    discordUsername,
-  });
-
-  try {
-    // Here you would typically:
-    // 1. Validate email format
-    // 2. Check if Discord account already linked
-    // 3. Send verification email or create link directly
-    // 4. Store in your database
-
-    // For now, we'll just simulate success
-    return c.json({
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: {
-        content: `🔗 Account linking initiated!\n\n**Discord:** ${discordUsername} (${discordUserId})\n**Email:** ${email}\n\n*In a real implementation, this would send a verification email.*`,
-        flags: MessageFlags.Ephemeral,
-      },
-    });
-  } catch (error) {
-    console.error("❌ Error linking account:", error);
-    return c.json({
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: {
-        content: "❌ An error occurred while linking your account.",
-        flags: MessageFlags.Ephemeral,
-      },
-    });
-  }
-}
 
 const PORT = process.env.PORT || 3000;
 

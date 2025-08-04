@@ -9,8 +9,8 @@
     "dev-interactions": "bun run src/interactions-server.ts",
     "register-commands": "bun run src/register-commands.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
-    "start": "bun run dist/index.js",
-    "test-endpoint": "node test-endpoint.js"
+    "prebuild": "cp -r ../convex/_generated src/convex",
+    "start": "bun run dist/index.js"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -24,6 +24,7 @@
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
     "hono": "^4.8.12",
-    "tweetnacl": "^1.0.3"
+    "tweetnacl": "^1.0.3",
+    "convex": "^1.17.4"
   }
 }

@@ -18,7 +18,11 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@convex": ["../convex"]
+    }
   },
   "include": ["./**/*"],
   "exclude": ["./_generated"]

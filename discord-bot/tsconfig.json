@@ -1,33 +1,37 @@
 {
   "compilerOptions": {
-    // Modern JS
+    // Modern JS/ESM
     "target": "ESNext",
     "module": "ESNext",
     "lib": ["ESNext"],
 
-    // Emit compiled code
+    // Output
     "outDir": "dist",
     "rootDir": "src",
     "noEmitOnError": true,
-    "allowJs": true,
     "declaration": false,
 
-    // Module resolution for Bun
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": false,
-    "verbatimModuleSyntax": true,
+    // Module resolution
+    "moduleResolution": "bundler",             // Required for ESM and convex/browser
+    "verbatimModuleSyntax": true,              // Allows bare imports
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    // Allow external packages
+    "allowJs": true,
+    "skipLibCheck": true,
 
     // Strictness
     "strict": true,
-    "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
 
-    // Source map (optional for debugging)
+    // Source maps
     "sourceMap": true,
 
-    // JSX if using React in frontend
+    // JSX support (if frontend involved)
     "jsx": "react-jsx"
   },
   "include": ["src"],
