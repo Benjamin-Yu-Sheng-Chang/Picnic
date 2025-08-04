@@ -8,7 +8,7 @@ import { ConvexError, v } from "convex/values";
 import { checkDiscordIdArgs, CheckDiscordIdArgs, CreateUserArgs, createUserValidator, VerifyOTPArgs } from "type";
 
 export const resend: Resend = new Resend(components.resend, {
-  apiKey: process.env.RESEND_API_KEY2!,
+  apiKey: process.env.RESEND_API_KEY!,
   testMode: false,
 });
 
@@ -40,7 +40,7 @@ export const sendOTP = mutation({
       expiresAt: Date.now() + 10 * 60 * 1000,
     });
     const resendResult = await resend.sendEmail(ctx, {
-      from: `${process.env.RESEND_SENDER2!}`,
+      from: `${process.env.RESEND_SENDER!}`,
       to: args.email,
       subject: `Your Picnic Bot One Time Password`,
       html: `
