@@ -1,45 +1,133 @@
-# Welcome to your Convex + React (Vite) + Convex Auth app
+# 🎉 Picnic - Discord Event Management System
 
-This is a [Convex](https://convex.dev/) project created with [`npm create convex`](https://www.npmjs.com/package/create-convex).
+This project leverages Convex and Resend for the backend, with a lightweight Vite frontend for viewing and managing scheduled events. The core functionality centers around a Discord bot tightly integrated with Convex, allowing users to create, update, and delete events directly through Discord interactions. Additionally, we implemented a custom OTP-based Discord account verification system, using Resend to send email codes and link user identities. While the current version focuses on core scheduling and account linking, future improvements could include features like event participation, reminders, and richer Discord UI components.
 
-After the initial setup (<2 minutes) you'll have a working full-stack app using:
+**[Demo Link](https://www.youtube.com/watch?v=1jdms3HfBZ4)**
 
-- Convex as your backend (database, server logic)
-- [React](https://react.dev/) as your frontend (web page interactivity)
-- [Vite](https://vitest.dev/) for optimized web hosting
-- [Tailwind](https://tailwindcss.com/) for building great looking UI
-- [Convex Auth](https://labs.convex.dev/auth) for authentication
+## 🚀 Features
 
-## Get started
+### Core Functionality
 
-If you just cloned this codebase and didn't use `npm create convex`, run:
+- **Discord Bot Integration**: Create, update, and delete events directly from Discord using slash commands
+- **Real-time Event Management**: Powered by Convex for instant data synchronization
+- **Email Verification**: Custom OTP implementation using Resend for Discord account verification
+- **Web Dashboard**: Clean Vite-powered frontend to view and manage events
+- **Natural Language Dates**: Smart date parsing using chrono-node (e.g., "tomorrow at 3pm")
+
+### Discord Commands
+
+- `/create-event` - Create new events with title, dates, description, location, and price
+- `/update-event` - Modify existing events
+- `/delete-event` - Remove events
+- `/verify-account` - Link Discord account with email verification
+- `/create-account` - Register new user accounts
+
+## 🛠️ Tech Stack
+
+### Backend
+
+- **[Convex](https://convex.dev)** - Real-time database and backend functions
+- **[Resend](https://resend.com)** - Email service for OTP verification
+- **[Discord.js](https://discord.js.org)** - Discord bot framework
+
+### Frontend
+
+- **[Vite](https://vitejs.dev)** - Lightning-fast development and build tool
+- **[React 19](https://react.dev)** - UI framework with latest features
+- **[Tailwind CSS](https://tailwindcss.com)** - Utility-first styling
+- **[TypeScript](https://typescriptlang.org)** - Type safety throughout
+
+### Additional Tools
+
+- **[Hono](https://hono.dev)** - Lightweight web framework for Discord interactions
+- **[chrono-node](https://github.com/wanasit/chrono)** - Natural language date parsing
+- v - Fast JavaScript runtime for Discord bot
+
+## 📁 Project Structure
 
 ```
-npm install
-npm run dev
+picnic/
+├── src/                    # Frontend React application
+│   ├── components/         # Reusable UI components
+│   ├── contexts/          # React Context providers (Discord auth)
+│   └── Calendar.tsx       # Main calendar view
+├── convex/                 # Backend functions and schema
+│   ├── schema.ts          # Database schema definitions
+│   ├── function.ts        # Main CRUD operations
+│   ├── model.ts          # Data layer logic
+│   └── discord/          # Discord-specific functions
+├── discord-bot/           # Discord bot application
+│   ├── src/
+│   │   ├── index.ts      # Main bot logic
+│   │   ├── register-commands.ts  # Slash command definitions
+│   │   └── http/         # Convex client integration
+│   └── package.json      # Bot-specific dependencies
+└── package.json          # Main project dependencies
 ```
 
-If you're reading this README on GitHub and want to use this template, run:
+## 🚀 Getting Started
 
+### Prerequisites
+
+- Node.js 18+ or Bun
+- Discord Application with Bot Token
+- Resend API Key for email services
+- Convex account
+
+### 1. Clone and Install
+
+```bash
+git clone <repository-url>
+cd picnic
+bun install
+
+# Install Discord bot dependencies
+cd discord-bot
+bun install
+cd ..
 ```
-npm create convex@latest -- -t react-vite-convexauth
+
+### 2. Environment Setup
+
+#### Main Project (.env.local)
+
+```env
+CONVEX_DEPLOYMENT=your-convex-deployment
+NEXT_PUBLIC_CONVEX_URL=your-convex-url
+RESEND_API_KEY=your-resend-api-key
 ```
 
-For more information on how to configure Convex Auth, check out the [Convex Auth docs](https://labs.convex.dev/auth/).
+#### Discord Bot (.env)
 
-For more examples of different Convex Auth flows, check out this [example repo](https://www.convex.dev/templates/convex-auth).
+```env
+DISCORD_TOKEN=your-discord-bot-token
+DISCORD_APP_ID=your-discord-application-id
+CONVEX_DEV_URL=your-convex-url
+```
 
-## Learn more
+**[Discord Doc](https://discord.com/developers/docs/activities/building-an-activity)**
 
-To learn more about developing your project with Convex, check out:
+### 3. Database Setup
 
-- The [Tour of Convex](https://docs.convex.dev/get-started) for a thorough introduction to Convex principles.
-- The rest of [Convex docs](https://docs.convex.dev/) to learn about all Convex features.
-- [Stack](https://stack.convex.dev/) for in-depth articles on advanced topics.
+```bash
+# Initialize Convex and deploy schema
+npm run dev:backend
+```
 
-## Join the community
+### 4. Discord Bot Setup
 
-Join thousands of developers building full-stack apps with Convex:
+```bash
+cd discord-bot
 
-- Join the [Convex Discord community](https://convex.dev/community) to get help in real-time.
-- Follow [Convex on GitHub](https://github.com/get-convex/), star and contribute to the open-source implementation of Convex.
+# Register slash commands
+bun run register-commands
+
+# Start the bot
+bun run dev
+```
+
+### 5. Start Frontend
+
+```bash
+npm run dev:frontend
+```
