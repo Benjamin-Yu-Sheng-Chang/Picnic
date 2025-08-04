@@ -3,9 +3,11 @@
 import { CalendarEvent, EventCalendar } from "@/components/event-calendar";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
+import { useDiscordId } from "./contexts/DiscordContext";
 
-export default function Component() {
-  const eventsData = useQuery(api.function.listEvents, {});
+export default function Calendar() {
+  const discordId = useDiscordId();
+  const eventsData = useQuery(api.function.listEvents, { discordUserId: discordId });
 
   const events: CalendarEvent[] =
     eventsData?.map((event: any) => ({
@@ -16,3 +18,4 @@ export default function Component() {
 
   return <EventCalendar events={events} />;
 }
+

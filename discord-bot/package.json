@@ -6,7 +6,6 @@
   "private": true,
   "scripts": {
     "dev": "bun run src/index.ts",
-    "dev-interactions": "bun run src/interactions-server.ts",
     "register-commands": "bun run src/register-commands.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "prebuild": "cp -r ../convex/_generated src/convex",

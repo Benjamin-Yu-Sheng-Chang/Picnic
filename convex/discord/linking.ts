@@ -2,10 +2,10 @@
 
 import { components } from "../_generated/api";
 import { Resend } from "@convex-dev/resend";
-import { mutation } from "../_generated/server";
+import { mutation, query } from "../_generated/server";
 import { alphabet, generateRandomString } from "oslo/crypto";
-import { LinkDiscordAccountArgs, linkDiscordAccountValidator, VerifyLinkArgs } from "../type";
 import { ConvexError, v } from "convex/values";
+import { checkDiscordIdArgs, CheckDiscordIdArgs, CreateUserArgs, createUserValidator, VerifyOTPArgs } from "type";
 
 export const resend: Resend = new Resend(components.resend, {
   apiKey: process.env.RESEND_API_KEY2!,
@@ -13,21 +13,23 @@ export const resend: Resend = new Resend(components.resend, {
 });
 
 export const sendOTP = mutation({
-  args: linkDiscordAccountValidator,
-  handler: async (ctx, args: LinkDiscordAccountArgs) => {
+  args: createUserValidator,
+  handler: async (ctx, args: CreateUserArgs) => {
    
     const existingEmail = await ctx.db.query("users").withIndex("email", q => q.eq("email", args.email)).first();
-    if (!existingEmail) {
-      throw new ConvexError("Email not found");
+    if (existingEmail) {
+      throw new ConvexError("Email already exists");
     }
-    const existingDiscordLink = await ctx.db.query("discordLinks").withIndex("discordUserId", q => q.eq("discordUserId", args.discordUserId)).first();
-    if (existingDiscordLink) {
-      throw new ConvexError("Discord account already linked");
+    const existingUser = await ctx.db.query("users").withIndex("discordUserId", q => q.eq("discordUserId", args.discordUserId)).first();
+    if (existingUser) {
+      throw new ConvexError("Discord account already exists");
     }
+
     const existingVerificationCode = await ctx.db.query("discordVerificationCodes").withIndex("discordUserId", q => q.eq("discordUserId", args.discordUserId)).first();
     if (existingVerificationCode) {
       throw new ConvexError("Verification code already exists");
     }
+
     const code = generateRandomString(6, alphabet("0-9"));
     await ctx.db.insert("discordVerificationCodes", {
       discordUserId: args.discordUserId,
@@ -82,40 +84,43 @@ export const sendOTP = mutation({
           </div>
           `,
     });
-    console.log(resendResult);
     return resendResult;
   },
 });
 
-export const verifyLink = mutation({
+export const verifyOTP = mutation({
   args: {
     token: v.string(),
     discordUserId: v.string(),
   },
-  handler: async (ctx, args: VerifyLinkArgs) => {
+  handler: async (ctx, args: VerifyOTPArgs) => {
     const discordVerificationCodes = await ctx.db.query("discordVerificationCodes").withIndex("discordUserId", q => q.eq("discordUserId", args.discordUserId)).first();
     if (!discordVerificationCodes || discordVerificationCodes.code !== args.token || discordVerificationCodes.expiresAt < Date.now() || discordVerificationCodes.usedAt) {
       throw new ConvexError("Invalid token");
     }
-    const existingDiscordLink = await ctx.db.query("discordLinks").withIndex("discordUserId", q => q.eq("discordUserId", args.discordUserId)).first();
-    if (existingDiscordLink) {
-      throw new ConvexError("Account already linked");
+    const existingUser = await ctx.db.query("users").withIndex("discordUserId", q => q.eq("discordUserId", args.discordUserId)).first();
+    if (existingUser) {
+      throw new ConvexError("Discord account already exists");
     }
-    const user = await ctx.db.query("users").withIndex("email", q => q.eq("email", discordVerificationCodes.email)).first();
-    if (!user) {
-      throw new ConvexError("User not found");
-    }
-    await ctx.db.insert("discordLinks", {
-      userId: user._id,
+    await ctx.db.insert("users", {
       discordUserId: args.discordUserId,
       discordUsername: discordVerificationCodes.discordUsername,
       discordDiscriminator: discordVerificationCodes.discordDiscriminator,
-      linkedAt: Date.now(),
-      isActive: true,
+      email: discordVerificationCodes.email,
+      createdAt: Date.now(),
+      verifiedAt: Date.now(),
     });
     await ctx.db.patch(discordVerificationCodes._id, {
       usedAt: Date.now(),
     });
     return true;
+  },
+});
+
+export const checkDiscordId = mutation({
+  args: checkDiscordIdArgs,
+  handler: async (ctx, args: CheckDiscordIdArgs) => {
+    const user = await ctx.db.query("users").withIndex("discordUserId", q => q.eq("discordUserId", args.discordUserId)).first();
+    return !!user;
   },
 });

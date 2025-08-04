@@ -22,17 +22,22 @@ export const eventValidator = {
 export const updateEventArgs = {
   eventId: v.id("events"),
   ...partial(omit(eventValidator, ["createdBy", "createdAt", "updatedAt"])),
+  discordUserId: v.string(),
 };
 
 export const deleteEventArgs = {
   eventId: v.id("events"),
+  discordUserId: v.string(),
 };
 
-export const createEventArgs = omit(eventValidator, [
-  "createdBy",
-  "createdAt",
-  "updatedAt",
-]);
+export const createEventArgs = {
+  ...omit(eventValidator, ["createdBy", "createdAt", "updatedAt"]),
+  discordUserId: v.string(),
+};
+
+export const listEventsArgs = {
+  discordUserId: v.string(),
+}
 
 export const discordCreateEventArgs = {
   ...createEventArgs,
@@ -47,6 +52,7 @@ export const discordDeleteEventArgs = {
   discordUserId: v.string(),
 }
 
+const _listEventsArgs = v.object(listEventsArgs);
 const _createEventArgs = v.object(createEventArgs);
 const _updateEventArgs = v.object(updateEventArgs);
 const _deleteEventArgs = v.object(deleteEventArgs);
@@ -54,6 +60,7 @@ const _discordCreateEventArgs = v.object(discordCreateEventArgs)
 const _discordUpdateEventArgs = v.object(discordUpdateEventArgs)
 const _discordDeleteEventArgs = v.object(discordDeleteEventArgs)
 
+export type ListEventsArgs = Infer<typeof _listEventsArgs>;
 export type CreateEventArgs = Infer<typeof _createEventArgs>;
 export type UpdateEventArgs = Infer<typeof _updateEventArgs>;
 export type DeleteEventArgs = Infer<typeof _deleteEventArgs>;
@@ -69,26 +76,33 @@ export type CalendarEvent = Omit<Doc<"events">, "start" | "end"> & {
 export type EventId = Id<"events">;
 export type UserId = Id<"users">;
 
-export const linkDiscordAccountValidator = {
+export const createUserValidator = {
   email: v.string(),
   discordUserId: v.string(),
   discordUsername: v.string(),
   discordDiscriminator: v.optional(v.string()),
 };
 
-export const verifyLinkValidator = {
+export const verifyOTPValidator = {
   token: v.string(),
   discordUserId: v.string(),
 };
 
-export const validateDiscordLinkValidator = {
+export const validateDiscordAccountValidator = {
   discordUserId: v.string(),
 };
 
-export const linkDiscordAccountArgs = v.object(linkDiscordAccountValidator);
-export const verifyLinkArgs = v.object(verifyLinkValidator);
-export const validateDiscordLinkArgs = v.object(validateDiscordLinkValidator);
+export const checkDiscordIdValidator = validateDiscordAccountValidator;
 
-export type LinkDiscordAccountArgs = Infer<typeof linkDiscordAccountArgs>;
-export type VerifyLinkArgs = Infer<typeof verifyLinkArgs>;
-export type ValidateDiscordLinkArgs = Infer<typeof validateDiscordLinkArgs>;
+
+export const verifyOTPArgs = v.object(verifyOTPValidator);
+export const validateDiscordAccountArgs = v.object(validateDiscordAccountValidator);
+export const createUserArgs = v.object(createUserValidator);
+export const checkDiscordIdArgs = v.object(checkDiscordIdValidator);
+
+
+export type ValidateDiscordAccountArgs = Infer<typeof validateDiscordAccountArgs>;
+export type VerifyOTPArgs = Infer<typeof verifyOTPArgs>;
+export type CreateUserArgs = Infer<typeof createUserArgs>;
+export type CheckDiscordIdArgs = Infer<typeof checkDiscordIdArgs>;
+

@@ -8,7 +8,7 @@ import { ConvexError } from "convex/values";
 export const convexClient = new ConvexHttpClient(process.env.CONVEX_DEV_URL!);
 
 // Helper functions for Discord bot commands
-export async function sendDiscordOTP(args: {
+export async function sendOTP(args: {
   email: string;
   discordUserId: string;
   discordUsername: string;
@@ -17,23 +17,28 @@ export async function sendDiscordOTP(args: {
   return await convexClient.mutation(api.discord.linking.sendOTP, args);
 }
 
-export async function verifyDiscordLink(args: {
+export async function verifyOTP(args: {
   token: string;
   discordUserId: string;
 }) {
-  return await convexClient.mutation(api.discord.linking.verifyLink, args);
+  return await convexClient.mutation(api.discord.linking.verifyOTP, args);
 }
 
-function parseStartAndEndDate(start?: string, end?: string) {
-  const startDate = start ? chrono.parseDate(start) : undefined;
-  const endDate = end ? new Date(chrono.parseDate(end) || new Date()) : undefined;
-  if (startDate && endDate && startDate.getTime() > endDate.getTime()) {
-    throw new Error("Start date must be before end date");
+export function parseStartAndEndDate(start?: string, end?: string) {
+  try {
+    const startDate = start ? new Date(chrono.parseDate(start) || new Date()) : undefined;
+    const endDate = end ? new Date(chrono.parseDate(end) || new Date()) : undefined;
+    if (startDate && endDate && startDate.getTime() > endDate.getTime()) {
+      throw new Error("Start date must be before end date");
+    }
+    return {
+      start: startDate?.getTime(),
+      end: endDate?.getTime(),
+    };
+  } catch (error) {
+    console.error("Error parsing start and end date", error);
+    throw new ConvexError("Invalid start or end date");
   }
-  return {
-    start: startDate?.getTime(),
-    end: endDate?.getTime(),
-  };
 }
 
 export async function createEvent(args: {
@@ -55,7 +60,7 @@ export async function createEvent(args: {
     console.error("Invalid start or end date");
     throw new ConvexError("Invalid start or end date");
   }
-  return await convexClient.mutation(api.discord.function.discordCreateEvent, {
+  return await convexClient.mutation(api.function.createEvent, {
     ...args,
     start,
     end,
@@ -78,11 +83,8 @@ export async function updateEvent(args: {
     throw new ConvexError("Event ID and Discord user ID are required");
   }
   const { start, end } = parseStartAndEndDate(args.start, args.end);
-  if (!start || !end) {
-    throw new ConvexError("Invalid start or end date");
-  }
 
-  return await convexClient.mutation(api.discord.function.discordUpdateEvent, {
+  return await convexClient.mutation(api.function.updateEvent, {
     ...args,
     start,
     end,
@@ -96,7 +98,7 @@ export async function deleteEvent(args: {
   if(!args.eventId || !args.discordUserId) {
     throw new ConvexError("Event ID is required");
   }
-  return await convexClient.mutation(api.discord.function.discordDeleteEvent, {
+  return await convexClient.mutation(api.function.deleteEvent, {
     eventId: args.eventId,
     discordUserId: args.discordUserId,
   });

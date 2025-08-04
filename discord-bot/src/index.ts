@@ -5,6 +5,7 @@ import {
   REST, 
   Routes,
 } from "discord.js";
+import * as chrono from 'chrono-node';
 
 const client = new Client({ 
   intents: [
@@ -51,9 +52,9 @@ import {
   ComponentType,
   MessageFlags,
 } from "discord.js";
-import { createEvent, sendDiscordOTP, updateEvent, verifyDiscordLink, deleteEvent } from "./http/convex-client";
+import { createEvent, sendOTP, updateEvent, verifyOTP, deleteEvent, parseStartAndEndDate } from "./http/convex-client";
 import { ConvexError } from "convex/values";
-import { commands, CREATE_EVENT_COMMAND, DELETE_EVENT_COMMAND, LINK_ACCOUNT_COMMAND, PING_COMMAND, UPDATE_EVENT_COMMAND, VERIFY_LINK_COMMAND } from "./register-commands";
+import { commands, CREATE_EVENT_COMMAND, DELETE_EVENT_COMMAND, CREATE_ACCOUNT_COMMAND, PING_COMMAND, UPDATE_EVENT_COMMAND, VERIFY_ACCOUNT_COMMAND, GET_DISCORD_ID_COMMAND } from "./register-commands";
 
 const app = new Hono();
 
@@ -64,6 +65,15 @@ const logMessage = (c: any, message: string) => {
             content: message,
           },
         });
+}
+
+const getOptionsValue = (keys: string[], options: any[]) => {
+  return options.reduce((acc, option) => {
+    if(keys.includes(option.name)) {
+      acc[option.name] = option.value;
+    }
+    return acc;
+  }, {} as Record<string, any>);
 }
 
 // Discord verification middleware
@@ -138,9 +148,9 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
       });
     }
 
-    if (name === LINK_ACCOUNT_COMMAND) {
+    if (name === CREATE_ACCOUNT_COMMAND) {
       try {
-        await sendDiscordOTP({
+        await sendOTP({
         email: options[0].value, // email is the first option
         discordUserId: member.user.id,
         discordUsername: member.user.username,
@@ -155,9 +165,9 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
       }
     }
 
-    if (name === VERIFY_LINK_COMMAND) {
+    if (name === VERIFY_ACCOUNT_COMMAND) {
       try {
-        await verifyDiscordLink({
+        await verifyOTP({
           token: options[0].value, // token is the first option
           discordUserId: member.user.id,
         });
@@ -172,22 +182,19 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
 
     if (name === CREATE_EVENT_COMMAND) {
       console.log("🔄 Creating event");
+      console.log(options);
       try {
-        await createEvent({
-          title: options[0].value,
-          start: options[1].value,
-          end: options[2].value,
-          description: options[3].value,
-          allDay: options[4].value,
-          location: options[5].value,
-          price: options[6].value,
-          discordUserId: member.user.id,
-          // discordUserId: member.user.id,
-          // title: "Test",
-          // start: "2025-08-03T12:00:00.000Z",
-          // end: "2025-08-03T13:00:00.000Z",
+        const optionValues = getOptionsValue(["title", "start", "end", "description", "all-day", "location", "price"], options);
+        const newEvent = await createEvent({
+          ...optionValues,
+          ...(optionValues["all-day"] && { allDay: optionValues["all-day"] }), // discord doesn't allow camelCase for boolean options
+          discordUserId: member.user.id
         });
-        return logMessage(c, "Event created");
+        if(newEvent) {
+          return logMessage(c, `Event created: ${newEvent.title} from ${new Date(newEvent.start).toLocaleString()} to ${new Date(newEvent.end).toLocaleString()}`);
+        } else {
+          throw new ConvexError("Event creation failed");
+        }
       } catch (error) {
         if(error instanceof ConvexError) {
           return c.json({
@@ -208,18 +215,18 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
 
     if (name === UPDATE_EVENT_COMMAND) {
       try {
-        await updateEvent({
+        const optionValues = getOptionsValue(["title", "start", "end", "description", "all-day", "location", "price"], options);
+        const updatedEvent = await updateEvent({
           eventId: options[0].value,
-          ...(options[1].value && { title: options[1].value }),
-          ...(options[2].value && { start: options[2].value }),
-          ...(options[3].value && { end: options[3].value }),
-          ...(options[4].value && { description: options[4].value }),
-          ...(options[5].value && { allDay: options[5].value }),
-          ...(options[6].value && { location: options[6].value }),
-          ...(options[7].value && { price: options[7].value }),
+          ...optionValues,
+          ...(optionValues["all-day"] && { allDay: optionValues["all-day"] }), // discord doesn't allow camelCase for boolean options
           discordUserId: member.user.id,
         });
-        return logMessage(c, "Event updated");
+        if(updatedEvent) {
+          return logMessage(c, `Event updated: ${updatedEvent.title} from ${updatedEvent.start} to ${updatedEvent.end}`);
+        } else {
+          throw new ConvexError("Event update failed");
+        }
       } catch (error) {
         if(error instanceof ConvexError) {
           return logMessage(c, error.message);
@@ -241,6 +248,10 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
         }
         return logMessage(c, "Unknown error deleting event");
       }
+    }
+
+    if (name === GET_DISCORD_ID_COMMAND) {
+      return logMessage(c, `Your Discord ID is ${member.user.id}`);
     }
   }
 

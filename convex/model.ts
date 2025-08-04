@@ -1,16 +1,27 @@
-import { CreateEventArgs, DeleteEventArgs, UpdateEventArgs, UserId, ValidateDiscordLinkArgs } from "./type";
+import { CreateEventArgs, CreateUserArgs, DeleteEventArgs, ListEventsArgs, UpdateEventArgs, UserId, ValidateDiscordAccountArgs } from "./type";
 import { MutationCtx, QueryCtx } from "./_generated/server";
+import { ConvexError } from "convex/values";
 
-export async function ListEvents(ctx: QueryCtx, args: { userId: UserId }) {
+export async function CreateUser(ctx: MutationCtx, args: CreateUserArgs) {
+  return await ctx.db.insert("users", { email: args.email, discordUserId: args.discordUserId, discordUsername: args.discordUsername, discordDiscriminator: args.discordDiscriminator, createdAt: Date.now() });
+}
+
+export async function ListEvents(ctx: QueryCtx, args: ListEventsArgs) {
+  const user = await GetUserWithDiscordId(ctx, { discordUserId: args.discordUserId });
+  if (!user) return [];
    const events = await ctx.db
       .query("events")
-      .withIndex("createdBy", (q: any) => q.eq("createdBy", args.userId))
+      .withIndex("createdBy", (q: any) => q.eq("createdBy", user._id))
       .collect();
 
    return events;
 }
 
-export async function CreateEvent(ctx: MutationCtx, args: CreateEventArgs & { userId: UserId }) {
+export async function CreateEvent(ctx: MutationCtx, args: CreateEventArgs) {
+  const user = await GetUserWithDiscordId(ctx, { discordUserId: args.discordUserId });
+  if (!user) {
+    throw new ConvexError("User not found");
+  }
   const eventToCreate = {
     title: args.title,
     start: args.start,
@@ -19,21 +30,27 @@ export async function CreateEvent(ctx: MutationCtx, args: CreateEventArgs & { us
     ...(args.description && { description: args.description }),
     ...(args.location && { location: args.location }),
     ...(args.price && { price: args.price }),
-    createdBy: args.userId,
+    createdBy: user._id,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   }
   
   const newEventId = await ctx.db.insert("events", eventToCreate);
- return newEventId;
+  
+  const event = await ctx.db.get(newEventId);
+  return event;
 }
 
-export async function UpdateEvent(ctx: MutationCtx, args: UpdateEventArgs & { userId: UserId }) {
-   const existingEvent = await ctx.db.get(args.eventId);
-    if (!existingEvent || existingEvent.createdBy !== args.userId) {
-      throw new Error("Event not found or not authorized");
-    }
-    const patchData: Omit<UpdateEventArgs, "eventId"> = {
+export async function UpdateEvent(ctx: MutationCtx, args: UpdateEventArgs) {
+  const user = await GetUserWithDiscordId(ctx, { discordUserId: args.discordUserId });
+  if (!user) {
+    throw new ConvexError("User not found");
+  }
+  const existingEvent = await ctx.db.get(args.eventId);
+  if (!existingEvent || existingEvent.createdBy !== user._id) {
+    throw new ConvexError("Event not found or not authorized");
+  }
+    const patchData: Omit<UpdateEventArgs, "eventId" | "discordUserId"> = {
       ...(args.title &&
         args.title !== existingEvent.title && { title: args.title }),
       ...(args.description &&
@@ -61,18 +78,23 @@ export async function UpdateEvent(ctx: MutationCtx, args: UpdateEventArgs & { us
       ...patchData,
       updatedAt: Date.now(),
     });
-    return;
+  const updatedEvent = await ctx.db.get(args.eventId);
+  return updatedEvent;
 }
 
-export async function DeleteEvent(ctx: MutationCtx, args: DeleteEventArgs & { userId: UserId }) {
+export async function DeleteEvent(ctx: MutationCtx, args: DeleteEventArgs) {
+  const user = await GetUserWithDiscordId(ctx, { discordUserId: args.discordUserId });
+  if (!user) {
+    throw new ConvexError("User not found");
+  }
   const existingEvent = await ctx.db.get(args.eventId);
-  if (!existingEvent || existingEvent.createdBy !== args.userId) {
-    throw new Error("Event not found or not authorized");
+  if (!existingEvent || existingEvent.createdBy !== user._id) {
+    throw new ConvexError("Event not found or not authorized");
   }
   await ctx.db.delete(args.eventId);
 }
 
-export async function GetDiscordLink(ctx: QueryCtx | MutationCtx, args: ValidateDiscordLinkArgs) {
-    const existingLink = await ctx.db.query("discordLinks").withIndex("discordUserId", (q: any) => q.eq("discordUserId", args.discordUserId)).unique();
-    return existingLink;
+export async function GetUserWithDiscordId(ctx: QueryCtx | MutationCtx, args: ValidateDiscordAccountArgs) {
+    const existingUser = await ctx.db.query("users").withIndex("discordUserId", (q: any) => q.eq("discordUserId", args.discordUserId)).first();
+    return existingUser;
 }

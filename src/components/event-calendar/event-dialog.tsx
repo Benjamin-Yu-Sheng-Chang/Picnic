@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useEventCalendarMutation } from "./hooks/use-event-calendar-mutation";
+import { useDiscordId } from "@/contexts/DiscordContext";
 
 interface EventDialogProps {
   event: Partial<CalendarEvent> | null;
@@ -67,6 +68,7 @@ export function EventDialog({
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const { createEvent, updateEvent, deleteEvent } = useEventCalendarMutation();
+  const discordId = useDiscordId();
 
   // Debug log to check what event is being passed
   useEffect(() => {
@@ -177,6 +179,7 @@ export function EventDialog({
         allDay,
         location,
         color,
+        discordUserId: discordId,
       });
     } else if (actionType === "update" && event?._id) {
       updateEvent({
@@ -188,6 +191,7 @@ export function EventDialog({
         allDay,
         location,
         color,
+        discordUserId: discordId,
       });
     }
     onClose();
@@ -195,7 +199,7 @@ export function EventDialog({
 
   const handleDelete = () => {
     if (event?._id) {
-      deleteEvent({ eventId: event._id });
+      deleteEvent({ eventId: event._id, discordUserId: discordId });
     }
     onClose();
   };

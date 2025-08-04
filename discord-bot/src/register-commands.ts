@@ -2,11 +2,12 @@ import "dotenv/config";
 import { REST, Routes, SlashCommandBuilder } from "discord.js";
 
 export const PING_COMMAND = "ping";
-export const LINK_ACCOUNT_COMMAND = "link-account";
-export const VERIFY_LINK_COMMAND = "verify-link";
+export const CREATE_ACCOUNT_COMMAND = "create-account";
+export const VERIFY_ACCOUNT_COMMAND = "verify-account";
 export const CREATE_EVENT_COMMAND = "create-event";
 export const UPDATE_EVENT_COMMAND = "update-event";
 export const DELETE_EVENT_COMMAND = "delete-event";
+export const GET_DISCORD_ID_COMMAND = "get-discord-id";
 
 export const commands = [
   new SlashCommandBuilder()
@@ -14,8 +15,8 @@ export const commands = [
     .setDescription("Replies with Pong!"),
 
   new SlashCommandBuilder()
-    .setName(LINK_ACCOUNT_COMMAND)
-    .setDescription("Link your Discord account to your existing user account")
+    .setName(CREATE_ACCOUNT_COMMAND)
+    .setDescription("Create a new user account")
     .addStringOption(option =>
       option.setName("email")
         .setDescription("Your account email address")
@@ -23,8 +24,8 @@ export const commands = [
     ),
 
   new SlashCommandBuilder()
-    .setName(VERIFY_LINK_COMMAND)
-    .setDescription("Verify your Discord account")
+    .setName(VERIFY_ACCOUNT_COMMAND)
+    .setDescription("Verify your account")
     .addStringOption(option =>
       option.setName("token")
         .setDescription("The token sent to your email")
@@ -108,7 +109,11 @@ export const commands = [
       option.setName("event-id")
         .setDescription("The ID of the event")
         .setRequired(true)
-    )
+    ),
+
+  new SlashCommandBuilder()
+    .setName(GET_DISCORD_ID_COMMAND)
+    .setDescription("Get your Discord ID")
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN!);

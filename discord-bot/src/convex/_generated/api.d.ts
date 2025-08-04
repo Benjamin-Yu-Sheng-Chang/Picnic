@@ -8,7 +8,6 @@
  * @module
  */
 
-import type * as auth from "../auth.js";
 import type * as discord_function from "../discord/function.js";
 import type * as discord_linking from "../discord/linking.js";
 import type * as function_ from "../function.js";
@@ -31,7 +30,6 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  auth: typeof auth;
   "discord/function": typeof discord_function;
   "discord/linking": typeof discord_linking;
   function: typeof function_;
