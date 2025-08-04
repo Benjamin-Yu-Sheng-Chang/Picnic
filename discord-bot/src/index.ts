@@ -76,6 +76,40 @@ const getOptionsValue = (keys: string[], options: any[]) => {
   }, {} as Record<string, any>);
 }
 
+const formatEventLog = (event: any) => {
+  const formatDate = (date: string | number) => {
+    try {
+      // Handle both string dates and timestamp numbers
+      const dateObj = typeof date === 'string' ? new Date(date) : new Date(date);
+      return dateObj.toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    } catch {
+      return String(date);
+    }
+  };
+
+  const parts = [
+    `📅 **${event.title}**`,
+    `🆔 ${event._id}`,
+    `⏰ ${formatDate(event.start)} → ${formatDate(event.end)}`,
+  ];
+
+  // Add optional fields if they exist
+  if (event.description) parts.push(`📝 ${event.description}`);
+  if (event.location) parts.push(`📍 ${event.location}`);
+  if (event.price && event.price > 0) parts.push(`💰 $${event.price}`);
+  if (event.allDay) parts.push(`🌅 All day event`);
+
+  return parts.join('\n');
+}
+
 // Discord verification middleware
 const verifyDiscordRequest = async (c: any, next: () => Promise<void>) => {
   const signature = c.req.header("x-signature-ed25519");
@@ -182,16 +216,17 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
 
     if (name === CREATE_EVENT_COMMAND) {
       console.log("🔄 Creating event");
-      console.log(options);
       try {
         const optionValues = getOptionsValue(["title", "start", "end", "description", "all-day", "location", "price"], options);
+        console.log(optionValues);
+        console.log(optionValues["all-day"]);
         const newEvent = await createEvent({
           ...optionValues,
-          ...(optionValues["all-day"] && { allDay: optionValues["all-day"] }), // discord doesn't allow camelCase for boolean options
           discordUserId: member.user.id
         });
         if(newEvent) {
-          return logMessage(c, `Event created: ${newEvent.title} from ${new Date(newEvent.start).toLocaleString()} to ${new Date(newEvent.end).toLocaleString()}`);
+          const eventDetails = formatEventLog(newEvent);
+          return logMessage(c, `✅ Event Created Successfully!\n\n${eventDetails}`);
         } else {
           throw new ConvexError("Event creation failed");
         }
@@ -216,14 +251,15 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
     if (name === UPDATE_EVENT_COMMAND) {
       try {
         const optionValues = getOptionsValue(["title", "start", "end", "description", "all-day", "location", "price"], options);
+        console.log(optionValues);
         const updatedEvent = await updateEvent({
           eventId: options[0].value,
           ...optionValues,
-          ...(optionValues["all-day"] && { allDay: optionValues["all-day"] }), // discord doesn't allow camelCase for boolean options
           discordUserId: member.user.id,
         });
         if(updatedEvent) {
-          return logMessage(c, `Event updated: ${updatedEvent.title} from ${updatedEvent.start} to ${updatedEvent.end}`);
+          const eventDetails = formatEventLog(updatedEvent);
+          return logMessage(c, `✅ Event Updated Successfully!\n\n${eventDetails}`);
         } else {
           throw new ConvexError("Event update failed");
         }
@@ -241,7 +277,7 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
           eventId: options[0].value,
           discordUserId: member.user.id,
         });
-        return logMessage(c, "Event deleted");
+        return logMessage(c, "✅ Event deleted");
       } catch (error) {
         if(error instanceof ConvexError) {
           return logMessage(c, error.message);

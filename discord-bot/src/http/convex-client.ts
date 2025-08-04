@@ -47,7 +47,7 @@ export async function createEvent(args: {
   description?: string;
   start: string;
   end: string;
-  allDay?: boolean;
+  "all-day"?: boolean;
   location?: string;
   price?: number;
 }) {
@@ -64,6 +64,8 @@ export async function createEvent(args: {
     ...args,
     start,
     end,
+    allDay: args["all-day"] ? true : false,
+    "all-day": undefined,
   });
 }
 
@@ -75,7 +77,7 @@ export async function updateEvent(args: {
   description?: string;
   start?: string;
   end?: string;
-  allDay?: boolean;
+  "all-day"?: boolean;
   location?: string;
   price?: number;
 }) { 
@@ -88,6 +90,8 @@ export async function updateEvent(args: {
     ...args,
     start,
     end,
+    allDay: args["all-day"] ? true : false,
+    "all-day": undefined,
   });
 }
 
