@@ -34,13 +34,32 @@ export const createEventArgs = omit(eventValidator, [
   "updatedAt",
 ]);
 
+export const discordCreateEventArgs = {
+  ...createEventArgs,
+  discordUserId: v.string(),
+}
+export const discordUpdateEventArgs = {
+  ...updateEventArgs,
+  discordUserId: v.string(),
+}
+export const discordDeleteEventArgs = {
+  ...deleteEventArgs,
+  discordUserId: v.string(),
+}
+
 const _createEventArgs = v.object(createEventArgs);
 const _updateEventArgs = v.object(updateEventArgs);
 const _deleteEventArgs = v.object(deleteEventArgs);
+const _discordCreateEventArgs = v.object(discordCreateEventArgs)
+const _discordUpdateEventArgs = v.object(discordUpdateEventArgs)
+const _discordDeleteEventArgs = v.object(discordDeleteEventArgs)
 
 export type CreateEventArgs = Infer<typeof _createEventArgs>;
 export type UpdateEventArgs = Infer<typeof _updateEventArgs>;
 export type DeleteEventArgs = Infer<typeof _deleteEventArgs>;
+export type DiscordCreateEventArgs = Infer<typeof _discordCreateEventArgs>;
+export type DiscordUpdateEventArgs = Infer<typeof _discordUpdateEventArgs>;
+export type DiscordDeleteEventArgs = Infer<typeof _discordDeleteEventArgs>;
 
 // for frontend
 export type CalendarEvent = Omit<Doc<"events">, "start" | "end"> & {
@@ -48,6 +67,7 @@ export type CalendarEvent = Omit<Doc<"events">, "start" | "end"> & {
   end: Date;
 };
 export type EventId = Id<"events">;
+export type UserId = Id<"users">;
 
 export const linkDiscordAccountValidator = {
   email: v.string(),
@@ -61,8 +81,14 @@ export const verifyLinkValidator = {
   discordUserId: v.string(),
 };
 
+export const validateDiscordLinkValidator = {
+  discordUserId: v.string(),
+};
+
 export const linkDiscordAccountArgs = v.object(linkDiscordAccountValidator);
 export const verifyLinkArgs = v.object(verifyLinkValidator);
+export const validateDiscordLinkArgs = v.object(validateDiscordLinkValidator);
 
 export type LinkDiscordAccountArgs = Infer<typeof linkDiscordAccountArgs>;
 export type VerifyLinkArgs = Infer<typeof verifyLinkArgs>;
+export type ValidateDiscordLinkArgs = Infer<typeof validateDiscordLinkArgs>;

@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "bun run src/index.ts",
     "dev-interactions": "bun run src/interactions-server.ts",
     "register-commands": "bun run src/register-commands.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
@@ -21,10 +21,11 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "chrono-node": "^2.8.3",
+    "convex": "^1.17.4",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
     "hono": "^4.8.12",
-    "tweetnacl": "^1.0.3",
-    "convex": "^1.17.4"
+    "tweetnacl": "^1.0.3"
   }
 }

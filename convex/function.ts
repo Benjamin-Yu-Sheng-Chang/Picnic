@@ -1,79 +1,40 @@
 import {
+  CreateEventArgs,
   createEventArgs,
+  DeleteEventArgs,
   deleteEventArgs,
   UpdateEventArgs,
   updateEventArgs,
 } from "./type";
-import { authMutation, authQuery } from "./utils";
+import { authMutation, AuthMutationCtx, authQuery, AuthQueryCtx } from "./utils";
+
+import * as Model from "./model";
 
 export const listEvents = authQuery({
   args: {},
-  handler: async (ctx: any) => {
-    const events = await ctx.db
-      .query("events")
-      .withIndex("createdBy", (q: any) => q.eq("createdBy", ctx.userId))
-      .collect();
-
-    return events;
+  handler: async (ctx: AuthQueryCtx) => {
+    return await Model.ListEvents(ctx, { userId: ctx.userId });
   },
 });
 
 export const createEvent = authMutation({
   args: createEventArgs,
-  handler: async (ctx: any, args: any) => {
-    const newEventId = await ctx.db.insert("events", {
-      ...args,
-      createdBy: ctx.userId,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-    return newEventId;
+  handler: async (ctx: AuthMutationCtx, args: CreateEventArgs) => {
+    return await Model.CreateEvent(ctx, { ...args, userId: ctx.userId });
   },
 });
 
 export const updateEvent = authMutation({
   args: updateEventArgs,
-  handler: async (ctx: any, args: any) => {
-    const existingEvent = await ctx.db.get(args.eventId);
-    if (!existingEvent) {
-      throw new Error("Event not found");
-    }
-    const patchData: Omit<UpdateEventArgs, "eventId"> = {
-      ...(args.title &&
-        args.title !== existingEvent.title && { title: args.title }),
-      ...(args.description &&
-        args.description !== existingEvent.description && {
-          description: args.description,
-        }),
-      ...(args.start &&
-        args.start !== existingEvent.start && { start: args.start }),
-      ...(args.end && args.end !== existingEvent.end && { end: args.end }),
-      ...(args.allDay &&
-        args.allDay !== existingEvent.allDay && { allDay: args.allDay }),
-      ...(args.color &&
-        args.color !== existingEvent.color && { color: args.color }),
-      ...(args.location &&
-        args.location !== existingEvent.location && {
-          location: args.location,
-        }),
-      ...(args.price &&
-        args.price !== existingEvent.price && { price: args.price }),
-    };
-    if (Object.keys(patchData).length === 0) {
-      return;
-    }
-    await ctx.db.patch(args.eventId, {
-      ...patchData,
-      updatedAt: Date.now(),
-    });
-    return;
-  },
+  handler: async (ctx: AuthMutationCtx, args: UpdateEventArgs) => {
+    return await Model.UpdateEvent(ctx, { ...args, userId: ctx.userId });
+  }
 });
 
 export const deleteEvent = authMutation({
   args: deleteEventArgs,
-  handler: async (ctx: any, args: any) => {
-    await ctx.db.delete(args.eventId);
-    return;
+  handler: async (ctx: AuthMutationCtx, args: DeleteEventArgs) => {
+    return await Model.DeleteEvent(ctx, { ...args, userId: ctx.userId });
   },
 });
+

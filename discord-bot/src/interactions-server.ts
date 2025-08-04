@@ -9,6 +9,7 @@ import {
   MessageFlags,
 } from "discord.js";
 import { sendDiscordOTP, verifyDiscordLink } from "./http/convex-client";
+import { ConvexError } from "convex/values";
 
 const app = new Hono();
 
@@ -90,35 +91,67 @@ app.post("/interactions", verifyDiscordRequest, async (c: any) => {
     }
 
     if (name === "link-account") {
-      await sendDiscordOTP({
+      try {
+        await sendDiscordOTP({
         email: options[0].value, // email is the first option
         discordUserId: member.user.id,
         discordUsername: member.user.username,
         discordDiscriminator: member.user.discriminator,
-      });
-      return c.json({
+       });
+       return c.json({
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
           content: "Linking account, please check your email for the verification code",
         },
       });
+      } catch (error) {
+        if(error instanceof ConvexError) {
+          return c.json({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+              content: error.message,
+            },
+          });
+        }
+        return c.json({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: "Unknown error sending Discord OTP",
+          },
+        });
+      }
     }
 
     if (name === "verify-link") {
-      const result = await verifyDiscordLink({
-        token: options[0].value, // token is the first option
-        discordUserId: member.user.id,
-      });
-      return c.json({
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: {
-          content: result ? "Verification successful" : "Verification failed",
-        },
-      });
+      try {
+        await verifyDiscordLink({
+          token: options[0].value, // token is the first option
+          discordUserId: member.user.id,
+        });
+        return c.json({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: "Verification successful",
+          },
+        });
+      } catch (error) {
+        if(error instanceof ConvexError) {
+          return c.json({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+              content: error.message,
+            },
+          });
+        }
+        return c.json({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: "Unknown error verifying Discord link",
+          },
+        });
+      }
     }
   }
-
-  
 
   // Unknown command
   return c.json({

@@ -2,14 +2,9 @@ import "dotenv/config";
 import { 
   Client, 
   GatewayIntentBits, 
-  SlashCommandBuilder, 
   REST, 
   Routes,
-  ChatInputCommandInteraction,
-  ApplicationCommandOptionType
 } from "discord.js";
-import { createServer } from "http";
-import { testDiscordLinking } from "./http/convex-client";
 
 const client = new Client({ 
   intents: [
@@ -19,64 +14,6 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ] 
 });
-
-// Slash command definition - Required options must come first!
-const commands = [
-  new SlashCommandBuilder()
-    .setName('ping')
-    .setDescription('Replies with Pong!'),
-
-  new SlashCommandBuilder()
-    .setName('test')
-    .setDescription('Basic test command like Discord\'s example'),
-
-  new SlashCommandBuilder()
-    .setName('link-account')
-    .setDescription('Link your Discord account to your existing user account')
-    .addStringOption(option =>
-      option.setName('email')
-        .setDescription('Your account email address')
-        .setRequired(true)
-    ),
-    
-  new SlashCommandBuilder()
-    .setName('create-schedule')
-    .setDescription('Create a new schedule event')
-    // Required options first
-    .addStringOption(option =>
-      option.setName('title')
-        .setDescription('Event title')
-        .setRequired(true))
-    .addIntegerOption(option =>
-      option.setName('start')
-        .setDescription('Start time (Unix timestamp)')
-        .setRequired(true))
-    .addIntegerOption(option =>
-      option.setName('end')
-        .setDescription('End time (Unix timestamp)')
-        .setRequired(true))
-    // Optional options after required ones
-    .addStringOption(option =>
-      option.setName('description')
-        .setDescription('Event description')
-        .setRequired(false))
-    .addBooleanOption(option =>
-      option.setName('allday')
-        .setDescription('Is this an all-day event?')
-        .setRequired(false))
-    .addStringOption(option =>
-      option.setName('color')
-        .setDescription('Event color (hex code)')
-        .setRequired(false))
-    .addStringOption(option =>
-      option.setName('location')
-        .setDescription('Event location')
-        .setRequired(false))
-    .addNumberOption(option =>
-      option.setName('price')
-        .setDescription('Event price')
-        .setRequired(false))
-].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
 
@@ -104,123 +41,230 @@ client.on("ready", async (c) => {
   }
 });
 
-// Helper function like in Discord's example
-function getRandomEmoji() {
-  const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '🥲', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳'];
-  return emojis[Math.floor(Math.random() * emojis.length)];
+import "dotenv/config";
+import { Hono } from "hono";
+import * as nacl from "tweetnacl";
+import {
+  InteractionType,
+  InteractionResponseType,
+  ApplicationCommandOptionType,
+  ComponentType,
+  MessageFlags,
+} from "discord.js";
+import { createEvent, sendDiscordOTP, updateEvent, verifyDiscordLink, deleteEvent } from "./http/convex-client";
+import { ConvexError } from "convex/values";
+import { commands, CREATE_EVENT_COMMAND, DELETE_EVENT_COMMAND, LINK_ACCOUNT_COMMAND, PING_COMMAND, UPDATE_EVENT_COMMAND, VERIFY_LINK_COMMAND } from "./register-commands";
+
+const app = new Hono();
+
+const logMessage = (c: any, message: string) => {
+  return c.json({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: message,
+          },
+        });
 }
 
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
+// Discord verification middleware
+const verifyDiscordRequest = async (c: any, next: () => Promise<void>) => {
+  const signature = c.req.header("x-signature-ed25519");
+  const timestamp = c.req.header("x-signature-timestamp");
+  const body = await c.req.text();
 
-  if (interaction.commandName === 'ping') {
-    await interaction.reply({
-      content: '🏓 Pong!',
-      ephemeral: true
-    });
+  if (!signature || !timestamp) {
+    return c.text("Missing signature headers", 401);
   }
 
-  if (interaction.commandName === 'test') {
-    await interaction.reply({
-      content: `hello world ${getRandomEmoji()}`,
-      ephemeral: true
-    });
+  const publicKey = process.env.DISCORD_PUBLIC_KEY;
+  if (!publicKey) {
+    console.error("Missing DISCORD_PUBLIC_KEY");
+    return c.text("Server configuration error", 500);
   }
 
-  if (interaction.commandName === 'link-account') {
-    
+  const isVerified = nacl.sign.detached.verify(
+    Buffer.from(timestamp + body),
+    Buffer.from(signature, "hex"),
+    Buffer.from(publicKey, "hex")
+  );
+
+  if (!isVerified) {
+    return c.text("Invalid request signature", 401);
   }
 
-  if (interaction.commandName === 'create-schedule') {
-    await handleCreateSchedule(interaction);
-  }
+  // Store the parsed body for the route handler
+  c.set("body", JSON.parse(body));
+  await next();
+};
+
+// Health check endpoint  
+app.get("/health", (c: any) => {
+  return c.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    service: "Discord Interactions Server",
+  });
 });
 
-async function handleCreateSchedule(interaction: ChatInputCommandInteraction) {
-  const title = interaction.options.getString('title', true);
-  const description = interaction.options.getString('description');
-  const start = interaction.options.getInteger('start', true);
-  const end = interaction.options.getInteger('end', true);
-  const allDay = interaction.options.getBoolean('allday');
-  const color = interaction.options.getString('color');
-  const location = interaction.options.getString('location');
-  const price = interaction.options.getNumber('price');
+// Discord interactions endpoint
+app.post("/interactions", verifyDiscordRequest, async (c: any) => {
+  // Interaction type and data (following Discord's official pattern)
+  const { type, data, member } = c.get("body");
+  /**
+   * Handle verification requests
+   */
+  if (type === InteractionType.Ping) {
+    console.log("🏓 Responding to ping");
+    return c.json({ type: InteractionResponseType.Pong});
+  }
 
-  // Debug logging
-  console.log('📝 Creating schedule with data:', {
-    title, description, start, end, allDay, color, location, price,
-    userId: interaction.user.id,
-    convexUrl: process.env.CONVEX_DEV_URL
-  });
+  /**
+   * Handle slash command requests
+   * See https://discord.com/developers/docs/interactions/application-commands#slash-commands
+   */
+  if (type === InteractionType.ApplicationCommand) {
+    const { name, options } = data;
 
-  try {
-    // Call the Convex HTTP endpoint
-    const response = await fetch(`${process.env.CONVEX_DEV_URL}/create-schedule`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        title,
-        description,
-        start,
-        end,
-        allDay,
-        color,
-        location,
-        price,
-        // Note: You'll need to handle authentication/user ID properly
-        userId: interaction.user.id // Using Discord user ID as placeholder
-      }),
-    });
+    console.log(`⚡ Command received: /${name}`);
 
-    console.log('📡 Response status:', response.status);
-
-    if (response.ok) {
-      const result = await response.json() as { eventId: string; message?: string };
-      console.log('✅ Success response:', result);
-      await interaction.reply({
-        content: `✅ Schedule created successfully! Event ID: ${result.eventId}`,
-        ephemeral: true
-      });
-    } else {
-      const error = await response.text();
-      console.log('❌ Error response:', error);
-      await interaction.reply({
-        content: `❌ Failed to create schedule: ${error}`,
-        ephemeral: true
+    // "ping" command
+    if (name === PING_COMMAND) {
+      return c.json({
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          content: "🏓 Pong! " + id,
+          flags: MessageFlags.Ephemeral,
+        },
       });
     }
-  } catch (error) {
-    console.error('Error creating schedule:', error);
-    await interaction.reply({
-      content: '❌ An error occurred while creating the schedule.',
-      ephemeral: true
-    });
+
+    if (name === LINK_ACCOUNT_COMMAND) {
+      try {
+        await sendDiscordOTP({
+        email: options[0].value, // email is the first option
+        discordUserId: member.user.id,
+        discordUsername: member.user.username,
+        discordDiscriminator: member.user.discriminator,
+       });
+       return logMessage(c, "Linking account, please check your email for the verification code");
+      } catch (error) {
+        if(error instanceof ConvexError) {
+          return logMessage(c, error.message);
+        }
+        return logMessage(c, "Unknown error sending Discord OTP");
+      }
+    }
+
+    if (name === VERIFY_LINK_COMMAND) {
+      try {
+        await verifyDiscordLink({
+          token: options[0].value, // token is the first option
+          discordUserId: member.user.id,
+        });
+        return logMessage(c, "Verification successful");
+      } catch (error) {
+        if(error instanceof ConvexError) {
+          return logMessage(c, error.message);
+        }
+        return logMessage(c, "Unknown error verifying Discord link");
+      }
+    }
+
+    if (name === CREATE_EVENT_COMMAND) {
+      console.log("🔄 Creating event");
+      try {
+        await createEvent({
+          // title: options[0].value,
+          // start: options[1].value,
+          // end: options[2].value,
+          // description: options[3].value,
+          // allDay: options[4].value,
+          // location: options[5].value,
+          // price: options[6].value,
+          // discordUserId: member.user.id,
+          discordUserId: member.user.id,
+          title: "Test",
+          start: "2025-08-03T12:00:00.000Z",
+          end: "2025-08-03T13:00:00.000Z",
+        });
+        return logMessage(c, "Event created");
+      } catch (error) {
+        if(error instanceof ConvexError) {
+          return c.json({
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+              content: error.message,
+            },
+          });
+        }
+        return c.json({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: "Unknown error creating schedule",
+          },
+        });
+      }
+    }
+
+    if (name === UPDATE_EVENT_COMMAND) {
+      try {
+        await updateEvent({
+          eventId: options[0].value,
+          title: options[1].value,
+          start: options[2].value,
+          end: options[3].value,
+          description: options[4].value,
+          allDay: options[5].value,
+          location: options[6].value,
+          price: options[7].value,
+          discordUserId: member.user.id,
+        });
+        return logMessage(c, "Event updated");
+      } catch (error) {
+        if(error instanceof ConvexError) {
+          return logMessage(c, error.message);
+        }
+        return logMessage(c, "Unknown error updating event");
+      }
+    }
+
+    if (name === DELETE_EVENT_COMMAND) {
+      try {
+        await deleteEvent({
+          eventId: options[0].value,
+          discordUserId: member.user.id,
+        });
+        return logMessage(c, "Event deleted");
+      } catch (error) {
+        if(error instanceof ConvexError) {
+          return logMessage(c, error.message);
+        }
+        return logMessage(c, "Unknown error deleting event");
+      }
+    }
   }
-}
 
-const result = await testDiscordLinking();
-console.log(result);
-client.login(process.env.DISCORD_TOKEN);
+  // Unknown command
+  return c.json({
+    type: InteractionResponseType.ChannelMessageWithSource,
+    data: {
+      content: "Unknown command",
+      flags: MessageFlags.Ephemeral,
+    },
+  });
+});
 
-// Optional: Simple health check server
+
 const PORT = process.env.PORT || 3000;
-const server = createServer((req, res) => {
-  if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      status: 'ok', 
-      bot: client.user?.username || 'not ready',
-      timestamp: new Date().toISOString()
-    }));
-  } else {
-    res.writeHead(404);
-    res.end('Not Found');
-  }
+
+console.log(`🌐 Starting Discord Interactions Server on port ${PORT}`);
+console.log(`📍 Interactions endpoint: http://localhost:${PORT}/interactions`);
+console.log(`🔍 Health check: http://localhost:${PORT}/health`);
+
+// Start the server
+Bun.serve({
+  port: PORT,
+  fetch: app.fetch,
 });
 
-server.listen(PORT, () => {
-  console.log(`🌐 Health check server running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-});
+console.log(`✅ Server is now listening on port ${PORT}`);
